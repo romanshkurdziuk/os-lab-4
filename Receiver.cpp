@@ -24,10 +24,27 @@ int main()
     file.close();
     cout << "Binary file created successfully." << endl;
 
-    
+
+
+
+
     int senderCount;
-    cout << "Enter sender count: " << endl;
+    cout << "Enter sender count: "<< endl;
     cin >> senderCount;
+    HANDLE hMutex = CreateMutexA(NULL, FALSE, "Lab4_Mutex");
+    HANDLE hSetEmpty = CreateSemaphoreA(NULL, recordsCount, recordsCount, "Lab4_SetEmpty");
+    HANDLE hSetFull = CreateSemaphoreA(NULL, 0, recordsCount, "Lab4_SetFull");
+    if (hMutex == NULL || hSetEmpty == NULL || hSetFull == NULL)
+    {
+        cerr << "Error creating synchronization objects." << std::endl;
+        return 1;
+    }
+    cout << "Synchronization objects created." << std::endl;
+
+
+
+
+
     STARTUPINFOA si;
     PROCESS_INFORMATION pi;
     string cmdLine = "Sender.exe " + fileName;
@@ -52,7 +69,9 @@ int main()
         }
     }
     cout << "All senders started." << endl;
-
+    CloseHandle(hMutex);
+    CloseHandle(hSetEmpty);
+    CloseHandle(hSetFull);
 
     cout << "Press enter to exit" << endl;
     cin.ignore();
