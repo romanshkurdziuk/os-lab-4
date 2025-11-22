@@ -21,6 +21,9 @@ int main()
         cerr << "Error opening file." << endl;
         return 1;
     }
+    int initialIndex = 0;
+    file.write((char*)& initialIndex, sizeof(int));
+    file.write((char*)& initialIndex, sizeof(int));
     file.close();
     cout << "Binary file created successfully." << endl;
 
@@ -32,9 +35,9 @@ int main()
     cout << "Enter sender count: "<< endl;
     cin >> senderCount;
     HANDLE hMutex = CreateMutexA(NULL, FALSE, "Lab4_Mutex");
-    HANDLE hSetEmpty = CreateSemaphoreA(NULL, recordsCount, recordsCount, "Lab4_SetEmpty");
-    HANDLE hSetFull = CreateSemaphoreA(NULL, 0, recordsCount, "Lab4_SetFull");
-    if (hMutex == NULL || hSetEmpty == NULL || hSetFull == NULL)
+    HANDLE hSemEmpty = CreateSemaphoreA(NULL, recordsCount, recordsCount, "Lab4_SemEmpty");
+    HANDLE hSemFull = CreateSemaphoreA(NULL, 0, recordsCount, "Lab4_SemFull");
+    if (hMutex == NULL || hSemEmpty == NULL || hSemFull == NULL)
     {
         cerr << "Error creating synchronization objects." << std::endl;
         return 1;
@@ -64,18 +67,20 @@ int main()
         }
         else
         {
-            cerr << "Error creating sender process." << endl;
+            DWORD errorCode = GetLastError();
+            cerr << "Error creating sender process. Error code: " << errorCode << endl;
             return 1;
         }
     }
     cout << "All senders started." << endl;
-    CloseHandle(hMutex);
-    CloseHandle(hSetEmpty);
-    CloseHandle(hSetFull);
 
     cout << "Press enter to exit" << endl;
     cin.ignore();
     cin.get();
+
+    CloseHandle(hMutex);
+    CloseHandle(hSemEmpty);
+    CloseHandle(hSemFull);
 
     return 0;
 }
