@@ -1,7 +1,7 @@
 #include <iostream>
 #include <windows.h>
 #include <string>
-#include "fstream"
+#include <fstream>
 #include "message.h"
 
 using namespace std;
@@ -33,8 +33,44 @@ int main(int argc, char* argv[])
         cin.get();
         return 1;
     }
-    cout << "Sender connected to file and sync objects." << endl;
-    cout << "Ready to work!" << endl;
+
+    file.seekg(0, ios::end);
+    int fileSize = (int)file.tellg();
+    int recordsCount = (fileSize - 2 * sizeof(int)) / sizeof(Message);
+    cout << "Connected. Queue size: " << recordsCount << endl;
+    int command;
+    while(true)
+    {
+        cout << "1. Send message\n0. Exit\nChoice: ";
+        cin >> command;
+        if (command == 0)
+        {
+            break;
+        }
+        if (command != 1) continue;
+        Message msg;
+        cout << "Enter message (max 20 symbols): " ;
+        cin >> msg.text;
+        cout << "Waiting for free text..." << endl;
+        WaitForSingleObject(hSemEmpty, INFINITE);
+        WaitForSingleObject(hMutex, INFINITE);
+        int writePos;
+        file.seekg(0, ios::beg);
+        file.read((char*)&writePos, sizeof(int));
+        int offset = 2 * sizeof(int) + writePos * sizeof(Message);
+        file.seekp(offset, ios::beg);
+        file.write((char*)&msg, sizeof(Message));
+        writePos = (writePos + 1) % recordsCount;
+        file.seekp(0, ios::beg);
+        file.write((char*)& writePos, sizeof(int));
+        ReleaseMutex(hMutex);
+        ReleaseSemaphore(hSemFull, 1, NULL);
+        cout << "Message sent!" << endl;
+    }
+    file.close();
+    CloseHandle(hMutex);
+    CloseHandle(hSemEmpty);
+    CloseHandle(hSemFull);
     cin.get();
     return 0;
 }

@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <string>
 #include <vector>
+#include <fstream>
 #include "fstream"
 #include "message.h"
 
@@ -22,10 +23,18 @@ int main()
         return 1;
     }
     int initialIndex = 0;
-    file.write((char*)& initialIndex, sizeof(int));
-    file.write((char*)& initialIndex, sizeof(int));
+    file.write((char*)&initialIndex, sizeof(int)); 
+    file.write((char*)&initialIndex, sizeof(int)); 
+    Message emptyMsg;
+    memset(emptyMsg.text, 0, 20); 
+    for (int i = 0; i < recordsCount; ++i) 
+    {
+        file.write((char*)&emptyMsg, sizeof(Message));
+    }
     file.close();
     cout << "Binary file created successfully." << endl;
+    cout << "Binary file created and initialized (Size: " 
+              << 2 * sizeof(int) + recordsCount * sizeof(Message) << " bytes)." << endl;
 
 
 
@@ -73,6 +82,40 @@ int main()
         }
     }
     cout << "All senders started." << endl;
+
+    fstream messageFile(fileName, ios::binary | ios::in | ios::out);
+    if (!messageFile.is_open())
+    {
+        cerr << "Error opening file." << endl;
+        return 1;
+    }
+    int command;
+    while(true)
+    {
+        cout << "1. Read message\n0. Exit\nChoice: ";
+        cin >> command;
+        if (command == 0) break;
+        if (command != 1) continue;
+        cout << "Waiting for message..." << endl;
+        WaitForSingleObject(hSemFull, INFINITE);
+        WaitForSingleObject(hMutex, INFINITE);
+        int readPos;
+        messageFile.seekg(sizeof(int), std::ios::beg);
+        messageFile.read((char*)&readPos, sizeof(int));
+        int offset = 2 * sizeof(int) + readPos * sizeof(Message);
+        Message msg;
+        messageFile.seekg(offset, ios::beg);
+        messageFile.read((char*)&msg, sizeof(Message));
+        readPos = (readPos + 1) % recordsCount;
+        messageFile.seekp(sizeof(int), ios::beg);
+        messageFile.write((char*)&readPos, sizeof(int));
+        messageFile.flush();
+        ReleaseMutex(hMutex);
+        ReleaseSemaphore(hSemEmpty, 1, NULL);
+        cout << "Message: " << msg.text << endl;
+    }
+    messageFile.close();
+
 
     cout << "Press enter to exit" << endl;
     cin.ignore();
