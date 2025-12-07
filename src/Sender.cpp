@@ -7,12 +7,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    try {
-        // Подключение в одну строчку
+    try 
+    {
         MessageQueue queue(argv[1]);
         std::cout << "Connected to queue.\n";
 
-        while (true) {
+        while (true) 
+        {
             int choice;
             std::cout << "1. Send\n0. Exit\n> ";
             std::cin >> choice;
@@ -23,17 +24,16 @@ int main(int argc, char* argv[]) {
             std::cin >> msg.text;
 
             std::cout << "Sending...\n";
-            queue.send(msg); // Просто отправляем!
+            queue.send(msg); 
             std::cout << "Sent!\n";
         }
 
-    } catch (const std::exception& e) {
+    } catch (const std::exception& e) 
+    {
         std::cerr << "Error: " << e.what() << std::endl;
         std::cin.get();
         return 1;
     }
     
-    // Пауза перед выходом (чтобы видеть ошибки)
-    // system("pause"); 
     return 0;
 }
