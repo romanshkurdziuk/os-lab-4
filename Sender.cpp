@@ -1,76 +1,39 @@
 #include <iostream>
-#include <windows.h>
-#include <string>
-#include <fstream>
-#include "message.h"
+#include "core.h"
 
-using namespace std;
-
-int main(int argc, char* argv[])
-{
-    if (argc < 2)
-    {
-        cerr << "Error: Filename not provided." << endl;
-        cin.get();
-        return 1;
-    }
-    string fileName = argv[1];
-    fstream file(fileName, ios::binary | ios::in | ios::out);
-    if (!file.is_open())
-    {
-        cerr << "Error: Could not open file: " << fileName << endl;
-        cin.get();
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "No filename provided\n";
         return 1;
     }
 
-    HANDLE hMutex = OpenMutexA(MUTEX_ALL_ACCESS, FALSE, "Lab4_Mutex");
-    HANDLE hSemEmpty = OpenSemaphoreA(SEMAPHORE_ALL_ACCESS, FALSE, "Lab4_SemEmpty");
-    HANDLE hSemFull = OpenSemaphoreA(SEMAPHORE_ALL_ACCESS, FALSE, "Lab4_SemFull");
+    try {
+        // Подключение в одну строчку
+        MessageQueue queue(argv[1]);
+        std::cout << "Connected to queue.\n";
 
-    if (hMutex == NULL || hSemEmpty == NULL || hSemFull == NULL)
-    {
-        cerr << "Error: Could not open synchronization objects." << endl;
-        cin.get();
-        return 1;
-    }
+        while (true) {
+            int choice;
+            std::cout << "1. Send\n0. Exit\n> ";
+            std::cin >> choice;
+            if (choice == 0) break;
 
-    file.seekg(0, ios::end);
-    int fileSize = (int)file.tellg();
-    int recordsCount = (fileSize - 2 * sizeof(int)) / sizeof(Message);
-    cout << "Connected. Queue size: " << recordsCount << endl;
-    int command;
-    while(true)
-    {
-        cout << "1. Send message\n0. Exit\nChoice: ";
-        cin >> command;
-        if (command == 0)
-        {
-            break;
+            Message msg;
+            std::cout << "Text: ";
+            std::cin >> msg.text;
+
+            std::cout << "Sending...\n";
+            queue.send(msg); // Просто отправляем!
+            std::cout << "Sent!\n";
         }
-        if (command != 1) continue;
-        Message msg;
-        cout << "Enter message (max 20 symbols): " ;
-        cin >> msg.text;
-        cout << "Waiting for free text..." << endl;
-        WaitForSingleObject(hSemEmpty, INFINITE);
-        WaitForSingleObject(hMutex, INFINITE);
-        int writePos;
-        file.seekg(0, ios::beg);
-        file.read((char*)&writePos, sizeof(int));
-        int offset = 2 * sizeof(int) + writePos * sizeof(Message);
-        file.seekp(offset, ios::beg);
-        file.write((char*)&msg, sizeof(Message));
-        writePos = (writePos + 1) % recordsCount;
-        file.seekp(0, ios::beg);
-        file.write((char*)& writePos, sizeof(int));
-        ReleaseMutex(hMutex);
-        ReleaseSemaphore(hSemFull, 1, NULL);
-        cout << "Message sent!" << endl;
+
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        std::cin.get();
+        return 1;
     }
-    file.close();
-    CloseHandle(hMutex);
-    CloseHandle(hSemEmpty);
-    CloseHandle(hSemFull);
-    cin.get();
+    
+    // Пауза перед выходом (чтобы видеть ошибки)
+    // system("pause"); 
     return 0;
 }
